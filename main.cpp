@@ -5,12 +5,10 @@
 //  Created by Quinlan Bock (and Cody Nettesheim) on 6/29/18.
 //  Copyright © 2018 Quinlan Bock. All rights reserved.
 //
-
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <cmath>
-#include <math.h>
 
 using namespace std;
 
@@ -106,6 +104,34 @@ int findClosest(int timestamp, vecSize & act){
     return index;
 }
 
+//Helper function to find exact point based on timestamp
+Point findPoint(int timestamp, vecSize & act) {
+    Point point;
+    for (int i = 0; i < act.size; i++) {
+        Point current = act.vec[i];
+        Point prev = act.vec[i - 1];
+        //Return the point with the matching timestamp if it exists
+        if (current.time == timestamp) {
+            point = current;
+            break;
+        }
+        //Otherwise, find the coordinates at the given timestamp based on the coordinates at the
+        // 2 closest (before and after) timestamps
+        else if (current.time > timestamp && prev.time < timestamp) {
+            int deltaTime = current.time - prev.time;
+            double deltaAlt = current.altitude - prev.altitude;
+            double deltaLat = current.latitude - prev.latitude;
+            double deltaLong = current.longitude - prev.longitude;
+            point.time = timestamp;
+            point.altitude = (deltaAlt / deltaTime) * (timestamp - prev.time);
+            point.latitude = (deltaLat / deltaTime) * (timestamp - prev.time);
+            point.longitude = (deltaLong / deltaTime) * (timestamp - prev.time);
+            break;
+        }
+    }
+    return point;
+}
+
 // Functions to go through and find the devations between given points
 void calcDev(vector<double> & deviations, vecSize & pre,vecSize & act){
     // Loop through the predictions (They have a lower resolution than the actual coordinates)
@@ -113,14 +139,12 @@ void calcDev(vector<double> & deviations, vecSize & pre,vecSize & act){
     {
         Point p = pre.vec[i];
         int pTime = p.time;
-        int x = findClosest(pTime, act);
-        Point a = act.vec[x];
+        Point a = findPoint(pTime, act);
         deviations[i] = distance(a,p);
     }
 }
 
 int main(int argc, const char * argv[]) {
-    
     string prediction_file = "../prediction.csv";
     string actual_file = "../actual.csv";
     
